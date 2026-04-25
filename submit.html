@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GMZ | Submit Record</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <style>
+        :root { 
+            --bg-page: #0b0f1a; 
+            --bg-card: #161b2c; 
+            --accent: #8b5cf6; 
+            --accent-glow: rgba(139, 92, 246, 0.3);
+            --text-main: #f8fafc; 
+            --text-muted: #64748b; 
+            --border: #2d3748; 
+        }
+
+        body { 
+            background-color: var(--bg-page); 
+            font-family: 'Montserrat', sans-serif; 
+            color: var(--text-main); 
+            margin: 0; 
+            padding-top: 80px; /* Forces content below the sticky navbar */
+        }
+
+        .container {
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .submission-card { 
+            background: var(--bg-card); 
+            border: 1px solid var(--border); 
+            padding: 2rem; 
+            border-radius: 12px; 
+            width: 100%;
+            max-width: 550px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 15px var(--accent-glow); 
+        }
+
+        h2 { margin: 0 0 1.5rem 0; font-weight: 800; font-size: 1.5rem; text-align: center; text-transform: uppercase; letter-spacing: 1px; }
+
+        .field-group { margin-bottom: 1.5rem; position: relative; }
+
+        .label-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+        .field-label { font-size: 0.75rem; font-weight: 700; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .optional-pill { 
+            font-size: 0.6rem; background: rgba(255,255,255,0.05); color: var(--text-muted); 
+            padding: 2px 8px; border-radius: 10px; border: 1px solid var(--border); font-weight: 600;
+        }
+
+        input[type="text"], textarea { 
+            width: 100%; padding: 12px; background: #0f172a; border: 1px solid var(--border); 
+            border-radius: 6px; color: var(--text-main); font-family: inherit; box-sizing: border-box; outline: none; transition: 0.2s;
+        }
+        input:focus { border-color: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
+
+        /* Enjoyment Slider */
+        .slider-container { padding: 10px 0; }
+        .slider { 
+            -webkit-appearance: none; width: 100%; height: 6px; background: #2d3748; 
+            border-radius: 5px; outline: none; cursor: pointer;
+        }
+        .slider::-webkit-slider-thumb { 
+            -webkit-appearance: none; width: 18px; height: 18px; background: var(--accent); 
+            border-radius: 50%; cursor: pointer; box-shadow: 0 0 10px var(--accent);
+        }
+        .slider-value { text-align: center; font-weight: 800; color: var(--accent); font-size: 1.2rem; margin-top: 5px; }
+
+        /* Custom Dropdown */
+        .dropdown-results {
+            position: absolute; top: 100%; left: 0; right: 0; background: #1e293b;
+            border: 1px solid var(--border); border-radius: 6px; max-height: 250px;
+            overflow-y: auto; display: none; z-index: 1000; margin-top: 4px;
+        }
+        .dropdown-item {
+            padding: 10px; cursor: pointer; display: flex; align-items: center; gap: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .dropdown-item:hover { background: var(--accent); color: white; }
+        .dropdown-item img { width: 24px; height: 24px; object-fit: contain; }
+
+        .btn-submit { 
+            background: var(--accent); color: white; border: none; padding: 14px; 
+            border-radius: 6px; font-weight: 800; cursor: pointer; width: 100%; 
+            text-transform: uppercase; transition: 0.3s; margin-top: 10px;
+        }
+        .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 5px 15px var(--accent-glow); }
+        .btn-submit:disabled { background: #1f2937; cursor: not-allowed; color: #4b5563; }
+
+        iframe { display: none; }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <a href="index.html"><img src="assets/logo.webp" class="nav-logo" alt="Logo"></a>
+        <div class="nav-links">
+            <div class="dropdown">
+                <button class="dropbtn">Lists <i class="fas fa-caret-down"></i></button>
+                <div class="dropdown-content">
+                    <a href="/mainlist"><i class="fas fa-list-ol"></i> Main List</a>
+                    <a href="/expert"><i class="fas fa-expand-arrows-alt"></i> Extended List</a>
+                </div>
+            </div>
+            <div class="dropdown">
+                <button class="dropbtn">Leaderboard <i class="fas fa-caret-down"></i></button>
+                <div class="dropdown-content">
+                    <a href="/leaderboard"><i class="fas fa-user"></i> Individual</a>
+                    <a href="/countries"><i class="fas fa-globe-americas"></i> Countries</a>
+                </div>
+            </div>
+            <div class="dropdown dropdown-right">
+                <button class="dropbtn">Socials <i class="fas fa-caret-down"></i></button>
+                <div class="dropdown-content">
+                    <a href="https://dsc.gg/appelcord" target="_blank"><i class="fab fa-discord"></i> Discord</a>
+                </div>
+            </div>
+            <div class="dropdown dropdown-right">
+                <button class="dropbtn">More <i class="fas fa-caret-down"></i></button>
+                <div class="dropdown-content">
+                    <a href="https://github.com/ProgramminguyFromScratch/GMZ" target="_blank"><i class="fab fa-github"></i> GitHub Repo</a>
+                    <a href="/guidelines"><i class="fas fa-file-alt"></i> Submission Guidelines</a>
+                    <a href="/submit"><i class="fa-solid fa-trophy"></i> Submit a Record</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+    <script type="text/javascript">var submitted=false;</script>
+    <iframe name="hidden_iframe" id="hidden_iframe" onload="if(submitted) {alert('Submission successful!'); window.location.reload();}"></iframe>
+
+    <div class="container">
+        <div class="submission-card">
+            <h2>Submit Record</h2>
+            <form action="https://docs.google.com/forms/d/e/1FAIpQLSfgjpCE6e8sHa-GcjVrD27Tcymbc0Q7w2MGdxVTtWnKi-uoXg/formResponse" method="POST" target="hidden_iframe" onsubmit="submitted=true;">
+                
+                <div class="field-group">
+                    <div class="label-row"><span class="field-label">Player Name</span></div>
+                    <input type="text" name="entry.619656823" required placeholder="Ex: TheGrassyGuys">
+                </div>
+
+                <div class="field-group">
+                    <div class="label-row"><span class="field-label">Search Level</span></div>
+                    <input type="text" id="lvl-input" autocomplete="off" placeholder="Search level name...">
+                    <input type="hidden" name="entry.614428572" id="lvl-name-final">
+                    <input type="hidden" name="entry.1258302997" id="lvl-id-final">
+                    <div id="results" class="dropdown-results"></div>
+                </div>
+
+                <div class="field-group">
+                    <div class="label-row"><span class="field-label">Replay Code</span></div>
+                    <input type="text" name="entry.868041341" required placeholder="Paste it here">
+                </div>
+
+                <div class="field-group">
+                    <div class="label-row">
+                        <span class="field-label">Additional proof</span>
+                        <span class="optional-pill">Optional</span>
+                    </div>
+                    <input type="text" name="entry.101583515" placeholder="Your answer">
+                </div>
+
+                <div class="field-group">
+                    <div class="label-row">
+                        <span class="field-label">Opinions</span>
+                        <span class="optional-pill">Optional</span>
+                    </div>
+                    <textarea name="entry.531767357" rows="2" placeholder="Tell us what you thought about the quality and difficulty..."></textarea>
+                </div>
+
+                <div class="field-group">
+                    <div class="label-row"><span class="field-label">Enjoyment Rating</span></div>
+                    <div class="slider-container">
+                        <input type="range" min="1" max="10" value="5" step="1" class="slider" id="enjoy-range" name="entry.1652160869">
+                        <div class="slider-value" id="range-val">5</div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-submit" id="sub-btn" disabled>Loading Data...</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const sheetID = "10yZLCN80B0ExwiY8E5Y5GB95NV1T5UI69vLYywtg_J0";
+        const sheets = [
+            { gid: "0", nameCol: 2, rankCol: 1, isRanked: true },
+            { gid: "1720349441", nameCol: 2, rankCol: 1, isRanked: true },
+            { gid: "1575264256", nameCol: 2, rankCol: null, isRanked: false }
+        ];
+
+        let db = [];
+
+        async function loadData() {
+            for (let s of sheets) {
+                const res = await fetch(`https://docs.google.com/spreadsheets/d/${sheetID}/export?format=csv&gid=${s.gid}`);
+                const text = await res.text();
+                const data = Papa.parse(text).data;
+                for (let i = 1; i < data.length; i++) {
+                    if (data[i][s.nameCol]) {
+                        db.push({
+                            id: data[i][0],
+                            name: data[i][s.nameCol],
+                            rank: s.isRanked ? data[i][s.rankCol] : null,
+                            diff: data[i][7] || "unknown",
+                            isRanked: s.isRanked
+                        });
+                    }
+                }
+            }
+            document.getElementById('sub-btn').disabled = false;
+            document.getElementById('sub-btn').textContent = "Submit Completion";
+        }
+
+        const input = document.getElementById('lvl-input');
+        const resBox = document.getElementById('results');
+        
+        input.oninput = () => {
+            const val = input.value.toLowerCase();
+            resBox.innerHTML = '';
+            if (!val) { resBox.style.display = 'none'; return; }
+            
+            const filtered = db.filter(l => l.name.toLowerCase().includes(val)).slice(0, 10);
+            filtered.forEach(l => {
+                const item = document.createElement('div');
+                item.className = 'dropdown-item';
+                const label = l.isRanked ? `#${l.rank} | ${l.name}` : l.name;
+                item.innerHTML = `<img src="assets/diffs/${l.diff}.png" onerror="this.src='assets/diffs/unknown.png'"> <span>${label}</span>`;
+                item.onclick = () => {
+                    input.value = label;
+                    document.getElementById('lvl-name-final').value = l.name;
+                    document.getElementById('lvl-id-final').value = l.id;
+                    resBox.style.display = 'none';
+                };
+                resBox.appendChild(item);
+            });
+            resBox.style.display = 'block';
+        };
+
+        const slider = document.getElementById("enjoy-range");
+        const output = document.getElementById("range-val");
+        slider.oninput = function() { output.innerHTML = this.value; }
+
+        window.onload = loadData;
+    </script>
+</body>
+</html>
