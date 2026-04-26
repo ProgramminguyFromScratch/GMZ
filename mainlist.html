@@ -178,10 +178,13 @@
         function safeText(val) { return val == null ? "" : String(val); }
 
         function mapRowToLevel(row) {
-            const m82id = safeText(row["ID (M84)"] || "N/A");
+            const keys = Object.keys(row);
+            const columnAValue = keys.length > 0 ? safeText(row[keys[0]]) : "N/A";
+    
             const acronym = safeText(row["Acronym"] || "").toLowerCase();
+    
             return {
-                id: m82id,
+                id: columnAValue,
                 name: safeText(row["Name"] || "Unknown"),
                 img: acronym ? `assets/thumbs/${acronym}.png` : "assets/thumbs/Noimageavailable.png",
                 author: safeText(row["Creator(s)"] || "Unknown"),
