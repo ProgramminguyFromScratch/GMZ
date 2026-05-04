@@ -17,7 +17,7 @@ jobs:
           ref: ${{ github.head_ref }}
 
       - name: Wait for System
-        run: sleep 5
+        run: sleep 50
 
       - name: Ensure Directory Exists
         run: mkdir -p assets/smallthumbs
