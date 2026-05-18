@@ -187,7 +187,7 @@
                 id: levelId || acronym,
                 name: safeText(row["Name"] || row["name"]),
                 author: safeText(row["Creator(s)"] || row["Author"]),
-                difficulty: safeText(row["Difficulty"]),
+                difficulty: safeText(row["Estimated Difficulty"]),
                 points: (pts && pts !== "0") ? pts : "TBD", 
                 quality: safeText(row["Quality"]),
                 _skillsArray: parseSkills(row["Skills Needed"]).map(s => s.toLowerCase()),
