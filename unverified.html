@@ -9,11 +9,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     <style>
-        /* Unverified Zone Color Scheme */
         :root {
             --grandmaster: #6a0dad; /* Dark Purple */
             --master: #2980b9;      /* Blue */
-            --expert-low: #c0392b;  /* Da Pink Sauce */
+            --expert: #ff69b4; /* Pink Sauce */
         }
 
         .bucket-header {
@@ -80,20 +79,16 @@
 
         .level-entry:hover { transform: translateX(5px); }
 
-        .bucket-high   .level-entry { border-left: 4px solid var(--grandmaster); }
-        .bucket-medium .level-entry { border-left: 4px solid var(--master); }
-        .bucket-low    .level-entry { border-left: 4px solid var(--expert-low); }
 
-        .bucket-high   .bucket-header { border-left: 5px solid var(--grandmaster); }
-        .bucket-medium .bucket-header { border-left: 5px solid var(--master); }
-        .bucket-low    .bucket-header { border-left: 5px solid var(--expert-low); }
+        .bucket-high   .level-entry, .bucket-high   .bucket-header { border-left: 5px solid var(--grandmaster); }
+        .bucket-medium .level-entry, .bucket-medium .bucket-header { border-left: 5px solid var(--master); }
+        .bucket-low    .level-entry, .bucket-low    .bucket-header { border-left: 5px solid var(--expert); }
     </style>
 </head>
 <body>
 
     <nav>
         <a href="index.html"><img src="assets/logo.webp" class="nav-logo" alt="Logo"></a>
-        
         <div class="nav-links">
             <div class="dropdown">
                 <button class="dropbtn">Lists <i class="fas fa-caret-down"></i></button>
@@ -129,6 +124,7 @@
             </div>
         </div>
     </nav>
+
     <div id="main-layout">
         <main>
             <div id="loading-overlay">Loading...</div>
@@ -136,7 +132,7 @@
         </main>
 
         <aside id="sidebar">
-            <a href="https://docs.google.com/forms/d/e/1FAIpQLSfgjpCE6e8sHa-GcjVrD27Tcymbc0Q7w2MGdxVTtWnKi-uoXg/viewform" target="_blank" class="submit-btn" style="margin-bottom: 25px;">Submit a Completion</a>
+            <a href="/submit" class="submit-btn" style="margin-bottom: 25px;">Submit a Record</a>
             <h3>Filter Skills</h3>
             <div id="tag-filters"></div>
         </aside>
@@ -147,9 +143,27 @@
         const unverifiedSheetGid = "1899417734";
 
         const BUCKETS = [
-            { key: "high", cssClass: "bucket-high", match: ["high expert", "grandmaster"], label: "Grandmaster (High)", diffAsset: "Grandmaster" },
-            { key: "medium", cssClass: "bucket-medium", match: ["medium expert", "master"], label: "Master (Medium)", diffAsset: "Master" },
-            { key: "low", cssClass: "bucket-low", match: ["low expert"], label: "Low Expert", diffAsset: "Low Expert" },
+            { 
+                key: "high", 
+                cssClass: "bucket-high", 
+                match: ["grandmaster i", "grandmaster ii", "grandmaster iii", "grandmaster iv", "grandmaster v+"], 
+                label: "Grandmaster Zone", 
+                diffAsset: "Grandmaster" 
+            },
+            { 
+                key: "medium", 
+                cssClass: "bucket-medium", 
+                match: ["low master", "mid master", "high master", "master"], 
+                label: "Master Zone", 
+                diffAsset: "Master" 
+            },
+            { 
+                key: "low", 
+                cssClass: "bucket-low", 
+                match: ["low expert", "mid expert", "high expert", "expert"], 
+                label: "Expert Zone", 
+                diffAsset: "Expert" 
+            },
         ];
 
         let activeTags = [];
@@ -159,7 +173,7 @@
         function parseSkills(raw) { return raw ? raw.split(/\r?\n|,/).map(s => s.trim()).filter(Boolean) : []; }
 
         function getBucket(level) {
-            const d = level.difficulty.toLowerCase();
+            const d = level.difficulty.toLowerCase().trim();
             return BUCKETS.find(b => b.match.some(m => d.includes(m))) || null;
         }
 
@@ -174,7 +188,7 @@
                 name: safeText(row["Name"] || row["name"]),
                 author: safeText(row["Creator(s)"] || row["Author"]),
                 difficulty: safeText(row["Difficulty"]),
-                points: (pts && pts !== "0") ? pts : "TBD", // Handle unassigned points
+                points: (pts && pts !== "0") ? pts : "TBD", 
                 quality: safeText(row["Quality"]),
                 _skillsArray: parseSkills(row["Skills Needed"]).map(s => s.toLowerCase()),
                 img: acronym ? `assets/thumbs/${acronym.toLowerCase()}.png` : "assets/thumbs/Noimageavailable.png"
@@ -214,7 +228,7 @@
                     `).join('')}
                 </div>`;
             });
-            document.getElementById("list-view").innerHTML = html || "<p style='padding:20px;'>No unverified levels found.</p>";
+            document.getElementById("list-view").innerHTML = html || "<p style='padding:20px;'>No unverified levels found with matching difficulties.</p>";
         }
 
         async function init() {
