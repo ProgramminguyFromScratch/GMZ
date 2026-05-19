@@ -70,9 +70,42 @@
 </head>
 <body>
     <nav>
-        <a href="/" class="logo-link"><img src="assets/logo.webp" alt="Logo" class="nav-logo"></a>
-    </nav>
+        <a href="index.html"><img src="assets/logo.webp" class="nav-logo" alt="Logo"></a>
+    
+        <div class="nav-links">
+            <div class="dropdown">
+                <button class="dropbtn">Lists <i class="fas fa-caret-down"></i></button>
+                <div class="dropdown-content">
+                    <a href="/mainlist"><i class="fas fa-list-ol"></i> Main List</a>
+                    <a href="/expert"><i class="fas fa-expand-arrows-alt"></i> Extended List</a>
+                </div>
+            </div>
 
+            <div class="dropdown">
+                <button class="dropbtn">Leaderboard <i class="fas fa-caret-down"></i></button>
+                <div class="dropdown-content">
+                    <a href="/leaderboard"><i class="fas fa-user"></i> Individual</a>
+                    <a href="/countries"><i class="fas fa-globe-americas"></i> Countries</a>
+                </div>
+            </div>
+
+            <div class="dropdown dropdown-right">
+                <button class="dropbtn">Socials <i class="fas fa-caret-down"></i></button>
+                <div class="dropdown-content">
+                    <a href="https://dsc.gg/appelcord" target="_blank"><i class="fab fa-discord"></i> Discord</a>
+                </div>
+            </div>
+
+            <div class="dropdown dropdown-right">
+                <button class="dropbtn">More <i class="fas fa-caret-down"></i></button>
+                <div class="dropdown-content">
+                    <a href="https://github.com/ProgramminguyFromScratch/GMZ" target="_blank"><i class="fab fa-github"></i> GitHub Repo</a>
+                    <a href="/guidelines"><i class="fas fa-file-alt"></i> Submission Guidelines</a>
+                    <a href="/submit"><i class="fa-solid fa-trophy"></i> Submit a Record</a>
+                </div>
+            </div>
+        </div>
+    </nav>
     <div class="page-container">
         <div class="top-nav">
             <a href="/mainlist" id="back-btn" class="back-link">← Back</a>
