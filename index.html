@@ -6,6 +6,7 @@
     <title>The Grandmaster Zone | Home</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
 <body>
     <nav>
@@ -99,12 +100,12 @@
                         <div class="staff-member">EnterGame</div>
                         <div class="staff-member">cwktao15764</div>
                         <div class="staff-member">programminguy</div>
+                        <div class="staff-member">pi314</div>
                     </div>
                 </div>
                 <div class="staff-group">
                     <h3>Helpers</h3>
                     <div class="staff-list vertical-staff">
-                        <div class="staff-member">pi314</div>
                         <div class="staff-member">TurningBack</div>
                     </div>
                 </div>
@@ -171,6 +172,45 @@
             }
         }
 
+        const SPREADSHEET_ID = "10yZLCN80B0ExwiY8E5Y5GB95NV1T5UI69vLYywtg_J0";
+        const LB_GID = "1908015854";
+        const RANKED_GIDS = ["0", "1720349441", "1575264256"]; // GM, Master, Expert
+
+        async function fetchCsv(gid) {
+            const res = await fetch(`https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${gid}`);
+            const text = await res.text();
+            return Papa.parse(text, { header: true, skipEmptyLines: true }).data;
+        }
+
+        async function loadStats() {
+            try {
+                const [lb, ...levelSheets] = await Promise.all([
+                    fetchCsv(LB_GID),
+                    ...RANKED_GIDS.map(gid => fetchCsv(gid))
+                ]);
+
+                const activeUsers = lb.filter(row => (row["Username"] || "").trim()).length;
+
+                let levelsRanked = 0;
+                let recordsSubmitted = 0;
+                levelSheets.forEach(sheet => {
+                    sheet.forEach(row => {
+                        const name = (row["Name"] || "").trim();
+                        if (!name) return;
+                        levelsRanked++;
+                        const victors = (row["Victors"] || "").split(/\s+/).filter(Boolean);
+                        recordsSubmitted += victors.length;
+                    });
+                });
+
+                animateValue("count-users", 0, activeUsers, 2000);
+                animateValue("count-levels", 0, levelsRanked, 2200);
+                animateValue("count-records", 0, recordsSubmitted, 2800);
+            } catch (err) {
+                console.error("Stats Error:", err);
+            }
+        }
+
         function animateValue(id, start, end, duration) {
             const obj = document.getElementById(id);
             if(!obj) return;
@@ -180,7 +220,7 @@
                 const progress = Math.min((timestamp - startTimestamp) / duration, 1);
                 const easeProgress = 1 - Math.pow(1 - progress, 3);
                 const currentCount = Math.floor(easeProgress * (end - start) + start);
-                obj.innerHTML = currentCount.toLocaleString() + "+";
+                obj.innerHTML = currentCount.toLocaleString();
                 if (progress < 1) window.requestAnimationFrame(step);
             };
             window.requestAnimationFrame(step);
@@ -188,9 +228,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             loadChangelog();
-            animateValue("count-users", 0, 50, 2000);
-            animateValue("count-levels", 0, 200, 2200);
-            animateValue("count-records", 0, 1000, 2800);
+            loadStats();
         });
     </script>
 </body>
