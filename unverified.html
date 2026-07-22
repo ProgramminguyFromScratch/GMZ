@@ -13,6 +13,11 @@
             --grandmaster: #6a0dad; /* Dark Purple */
             --master: #2980b9;      /* Blue */
             --expert: #ff69b4; /* Pink Sauce */
+            --other: #64748b;  /* Muted Gray */
+        }
+
+        #main-layout {
+            grid-template-columns: 1fr;
         }
 
         .bucket-header {
@@ -83,6 +88,7 @@
         .bucket-high   .level-entry, .bucket-high   .bucket-header { border-left: 5px solid var(--grandmaster); }
         .bucket-medium .level-entry, .bucket-medium .bucket-header { border-left: 5px solid var(--master); }
         .bucket-low    .level-entry, .bucket-low    .bucket-header { border-left: 5px solid var(--expert); }
+        .bucket-other  .level-entry, .bucket-other  .bucket-header { border-left: 5px solid var(--other); }
     </style>
 </head>
 <body>
@@ -127,15 +133,16 @@
 
     <div id="main-layout">
         <main>
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
+                <label for="sort-selector" style="font-size:0.8rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted);">Sort By</label>
+                <select id="sort-selector" onchange="renderLevels()" style="background: var(--bg-page); color: white; border: 1px solid var(--border); padding: 8px 12px; border-radius: 6px; font-family: 'Montserrat'; cursor: pointer; font-weight: 600; outline: none;">
+                    <option value="default">DEFAULT</option>
+                    <option value="quality">QUALITY</option>
+                </select>
+            </div>
             <div id="loading-overlay">Loading...</div>
             <div id="list-view"></div>
         </main>
-
-        <aside id="sidebar">
-            <a href="/submit" class="submit-btn" style="margin-bottom: 25px;">Submit a Record</a>
-            <h3>Filter Skills</h3>
-            <div id="tag-filters"></div>
-        </aside>
     </div>
 
     <script>
@@ -146,64 +153,76 @@
             { 
                 key: "high", 
                 cssClass: "bucket-high", 
-                match: ["grandmaster i", "grandmaster ii", "grandmaster iii", "grandmaster iv", "grandmaster v+"], 
-                label: "Grandmaster Zone", 
+                match: (d) => d.includes("grandmaster"), 
+                label: "Grandmaster Difficulty", 
                 diffAsset: "Grandmaster" 
             },
             { 
                 key: "medium", 
                 cssClass: "bucket-medium", 
-                match: ["low master", "mid master", "high master", "master"], 
-                label: "Master Zone", 
+                match: (d) => d.includes("master") && !d.includes("grandmaster"), 
+                label: "Master Difficulty", 
                 diffAsset: "Master" 
             },
             { 
                 key: "low", 
                 cssClass: "bucket-low", 
-                match: ["low expert", "mid expert", "high expert", "expert"], 
-                label: "Expert Zone", 
+                match: (d) => d.includes("expert"), 
+                label: "Expert Difficulty", 
                 diffAsset: "Expert" 
+            },
+            { 
+                key: "other", 
+                cssClass: "bucket-other", 
+                match: () => false, 
+                label: "Other / Ungraded", 
+                diffAsset: "Unrated" 
             },
         ];
 
-        let activeTags = [];
         window.DATA = { levels: [] };
 
+        const QUALITY_RANK = { "basic": 0, "good": 1, "inspired": 2, "stellar": 3, "mythic": 4 };
+        function qualityRank(q) {
+            const key = (q || "").toString().trim().toLowerCase();
+            return QUALITY_RANK.hasOwnProperty(key) ? QUALITY_RANK[key] : -1;
+        }
+
         function safeText(val) { return val ? String(val).trim() : ""; }
-        function parseSkills(raw) { return raw ? raw.split(/\r?\n|,/).map(s => s.trim()).filter(Boolean) : []; }
 
         function getBucket(level) {
             const d = level.difficulty.toLowerCase().trim();
-            return BUCKETS.find(b => b.match.some(m => d.includes(m))) || null;
+            return BUCKETS.find(b => b.match(d)) || BUCKETS.find(b => b.key === "other");
         }
 
-        function mapRowToLevel(row) {
+        function mapRowToLevel(row, rowIndex) {
             const firstColHeader = Object.keys(row)[0];
             const levelId = safeText(row[firstColHeader]);
             const acronym = safeText(row["Acronym"]);
-            const pts = safeText(row["Points"]);
-            
             return {
                 id: levelId || acronym,
+                rank: rowIndex + 1,
                 name: safeText(row["Name"] || row["name"]),
                 author: safeText(row["Creator(s)"] || row["Author"]),
                 difficulty: safeText(row["Estimated Difficulty"]),
-                points: (pts && pts !== "0") ? pts : "TBD", 
                 quality: safeText(row["Quality"]),
-                _skillsArray: parseSkills(row["Skills Needed"]).map(s => s.toLowerCase()),
-                img: acronym ? `assets/thumbs/${acronym.toLowerCase()}.png` : "assets/thumbs/Noimageavailable.png"
+                img: `assets/smallthumbs/cellImage_${unverifiedSheetGid}_${rowIndex}.jpg`
             };
         }
 
         function renderLevels() {
-            const filtered = DATA.levels.filter(lvl => 
-                activeTags.every(t => lvl._skillsArray.includes(t.toLowerCase()))
-            );
+            const filtered = DATA.levels;
+
+            const sortType = document.getElementById('sort-selector') ? document.getElementById('sort-selector').value : 'default';
 
             let html = "";
             BUCKETS.forEach(bucket => {
                 const levels = filtered.filter(lvl => getBucket(lvl)?.key === bucket.key);
                 if (levels.length === 0) return;
+
+                if (sortType === 'quality') {
+                    levels.sort((a, b) => qualityRank(b.quality) - qualityRank(a.quality));
+                }
 
                 html += `
                 <div class="${bucket.cssClass}">
@@ -215,10 +234,10 @@
                     ${levels.map(lvl => `
                         <div class="level-entry" onclick="window.location.href='/level?id=${encodeURIComponent(lvl.id)}'" style="--bg-image: url('${lvl.img}')">
                             <img class="level-thumb" src="${lvl.img}" onerror="this.src='assets/thumbs/Noimageavailable.png'">
+                            <div class="level-rank">#${lvl.rank}</div>
                             <div class="level-info" style="padding: 0 12px; min-width: 0;">
                                 <div class="level-name">${lvl.name || "Untitled"}</div>
                                 <div class="level-meta">by ${lvl.author}</div>
-                                <div class="level-meta" style="color:var(--accent); font-weight:700;">${lvl.points} ${lvl.points === 'TBD' ? '' : 'pts'}</div>
                             </div>
                             <div class="level-difficulty-slot" style="display:flex; gap:5px; margin-left: auto; padding-right:15px;">
                                 ${lvl.quality ? `<img src="assets/quality/${lvl.quality.trim()}.svg" class="diff-icon-small">` : ''}
@@ -237,23 +256,7 @@
                 const text = await res.text();
                 const { data } = Papa.parse(text, { header: true, skipEmptyLines: true });
                 
-                DATA.levels = data.map(mapRowToLevel);
-
-                const tagSet = new Set();
-                DATA.levels.forEach(l => l._skillsArray.forEach(s => tagSet.add(s)));
-                const container = document.getElementById("tag-filters");
-                
-                Array.from(tagSet).sort().forEach(tag => {
-                    const btn = document.createElement("button");
-                    btn.className = "tag-btn";
-                    btn.textContent = tag;
-                    btn.onclick = () => {
-                        btn.classList.toggle("active-tag");
-                        activeTags = Array.from(document.querySelectorAll(".active-tag")).map(b => b.textContent);
-                        renderLevels();
-                    };
-                    container.appendChild(btn);
-                });
+                DATA.levels = data.map((row, i) => mapRowToLevel(row, i));
 
                 document.getElementById("loading-overlay").style.display = "none";
                 renderLevels();

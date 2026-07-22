@@ -168,6 +168,7 @@
                 <div class="dropdown-content">
                     <a href="/mainlist"><i class="fas fa-list-ol"></i> Main List</a>
                     <a href="/expert"><i class="fas fa-expand-arrows-alt"></i> Extended List</a>
+                    <a href="/unverified"><i class="fas fa-question-circle"></i> Unverified Zone</a>
                 </div>
             </div>
             <div class="dropdown">
@@ -232,9 +233,11 @@
     async function init() {
         try {
             const [lb, l1, l2, l3] = await Promise.all([fetchCsv(LB_GID), fetchCsv(LEVEL_GIDS[0]), fetchCsv(LEVEL_GIDS[1]), fetchCsv(LEVEL_GIDS[2])]);
-            window.ALL_LEVELS = [...l1, ...l2, ...l3].map(row => ({
+            const tagWithGid = (rows, gid) => rows.map((row, i) => ({ row, gid, idx: i }));
+            const combined = [...tagWithGid(l1, LEVEL_GIDS[0]), ...tagWithGid(l2, LEVEL_GIDS[1]), ...tagWithGid(l3, LEVEL_GIDS[2])];
+            window.ALL_LEVELS = combined.map(({ row, gid, idx }) => ({
                 name: (row["Name"] || "").trim(),
-                acronym: (row["Acronym"] || "").toLowerCase(),
+                thumb: `assets/thumbs/cellImage_${gid}_${idx}.jpg`,
                 difficulty: (row["Difficulty"] || "").trim(),
                 skills: (row["Skills Needed"] || row["Skills"] || "").split(/,|\n/).map(s=>s.trim()).filter(Boolean),
                 victors: (row["Victors"] || "").split(/\s+/).filter(Boolean)
@@ -346,7 +349,7 @@
 
             <div class="section-title" style="color:var(--text-muted)">Hardest Clear</div>
             <div class="hc-card">
-                <img class="hc-thumb" src="assets/thumbs/${hardestLvl?.acronym || 'default'}.png" onerror="this.src='assets/thumbs/default.png'">
+                <img class="hc-thumb" src="${hardestLvl?.thumb || 'assets/thumbs/default.png'}" onerror="this.src='assets/thumbs/default.png'">
                 <div class="hc-overlay">
                     <div style="font-size:1.4rem; font-weight:800; text-shadow:0 3px 10px rgba(0,0,0,0.9); color: #fff;">${p.hardest}</div>
                 </div>

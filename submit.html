@@ -107,6 +107,7 @@
                 <div class="dropdown-content">
                     <a href="/mainlist"><i class="fas fa-list-ol"></i> Main List</a>
                     <a href="/expert"><i class="fas fa-expand-arrows-alt"></i> Extended List</a>
+                    <a href="/unverified"><i class="fas fa-question-circle"></i> Unverified Zone</a>
                 </div>
             </div>
             <div class="dropdown">
@@ -176,7 +177,7 @@
 
 <div class="field-group">
     <div class="label-row">
-        <span class="field-label">Enjoyment Rating (BROKEN RN IT WONT WORK)</span>
+        <span class="field-label">Enjoyment Rating</span>
         <span class="optional-pill">Optional</span>
     </div>
     <div class="slider-container">
@@ -250,7 +251,14 @@
 
         const slider = document.getElementById("enjoy-range");
         const output = document.getElementById("range-val");
-        slider.oninput = function() { output.innerHTML = this.value; }
+        const enjoyFinal = document.getElementById("enjoy-final-value");
+
+        function updateEnjoyment() {
+            output.innerHTML = slider.value;
+            enjoyFinal.value = slider.value;
+        }
+        slider.oninput = updateEnjoyment;
+        updateEnjoyment();
 
         window.onload = loadData;
     </script>

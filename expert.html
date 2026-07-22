@@ -94,6 +94,7 @@
                 <div class="dropdown-content">
                     <a href="/mainlist"><i class="fas fa-list-ol"></i> Main List</a>
                     <a href="/expert"><i class="fas fa-expand-arrows-alt"></i> Extended List</a>
+                    <a href="/unverified"><i class="fas fa-question-circle"></i> Unverified Zone</a>
                 </div>
             </div>
 
@@ -117,6 +118,7 @@
                 <div class="dropdown-content">
                     <a href="https://github.com/ProgramminguyFromScratch/GMZ" target="_blank"><i class="fab fa-github"></i> GitHub Repo</a>
                     <a href="/guidelines"><i class="fas fa-file-alt"></i> Submission Guidelines</a>
+                    <a href="/submit"><i class="fa-solid fa-trophy"></i> Submit a Record</a>
                 </div>
             </div>
         </div>
@@ -129,7 +131,12 @@
         </main>
 
         <aside id="sidebar">
-            <a href="https://docs.google.com/forms/d/e/1FAIpQLSfgjpCE6e8sHa-GcjVrD27Tcymbc0Q7w2MGdxVTtWnKi-uoXg/viewform" target="_blank" class="submit-btn" style="margin-bottom: 25px;">Submit a Completion</a>
+            <a href="/submit" class="submit-btn" style="margin-bottom: 25px;">Submit a Completion</a>
+            <h3>Sort By</h3>
+            <select id="sort-selector" onchange="renderLevels()" style="width:100%; background: var(--bg-page); color: white; border: 1px solid var(--border); padding: 10px; border-radius: 6px; font-family: 'Montserrat'; cursor: pointer; font-weight: 600; outline: none; margin-bottom: 20px;">
+                <option value="default">DEFAULT</option>
+                <option value="enjoyment">ENJOYMENT</option>
+            </select>
             <h3>Filter Skills</h3>
             <div id="tag-filters"></div>
         </aside>
@@ -156,7 +163,7 @@
             return BUCKETS.find(b => b.match.some(m => d.includes(m))) || null;
         }
 
-        function mapRowToLevel(row) {
+        function mapRowToLevel(row, rowIndex) {
             const firstColHeader = Object.keys(row)[0];
             const levelId = safeText(row[firstColHeader]);
             const acronym = safeText(row["Acronym"]);
@@ -168,8 +175,9 @@
                 difficulty: safeText(row["Difficulty"]),
                 points: safeText(row["Points"]),
                 quality: safeText(row["Quality"]),
+                enjoyment: safeText(row["Enjoyment"]),
                 _skillsArray: parseSkills(row["Skills Needed"]).map(s => s.toLowerCase()),
-                img: acronym ? `assets/thumbs/${acronym.toLowerCase()}.png` : "assets/thumbs/Noimageavailable.png"
+                img: `assets/smallthumbs/cellImage_${expertSheetGid}_${rowIndex}.jpg`
             };
         }
 
@@ -178,10 +186,16 @@
                 activeTags.every(t => lvl._skillsArray.includes(t.toLowerCase()))
             );
 
+            const sortType = document.getElementById('sort-selector') ? document.getElementById('sort-selector').value : 'default';
+
             let html = "";
             BUCKETS.forEach(bucket => {
                 const levels = filtered.filter(lvl => getBucket(lvl)?.key === bucket.key);
                 if (levels.length === 0) return;
+
+                if (sortType === 'enjoyment') {
+                    levels.sort((a, b) => (parseFloat(b.enjoyment) || 0) - (parseFloat(a.enjoyment) || 0));
+                }
 
                 html += `
                 <div class="${bucket.cssClass}">
@@ -213,7 +227,7 @@
             const res = await fetch(`https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&gid=${expertSheetGid}`);
             const text = await res.text();
             const { data } = Papa.parse(text, { header: true, skipEmptyLines: true });
-            DATA.levels = data.map(mapRowToLevel);
+            DATA.levels = data.map((row, i) => mapRowToLevel(row, i));
 
             const tagSet = new Set();
             DATA.levels.forEach(l => l._skillsArray.forEach(s => tagSet.add(s)));

@@ -124,6 +124,7 @@
                 <div class="dropdown-content">
                     <a href="/mainlist"><i class="fas fa-list-ol"></i> Main List</a>
                     <a href="/expert"><i class="fas fa-expand-arrows-alt"></i> Extended List</a>
+                    <a href="/unverified"><i class="fas fa-question-circle"></i> Unverified Zone</a>
                 </div>
             </div>
 
@@ -147,6 +148,7 @@
                 <div class="dropdown-content">
                     <a href="https://github.com/ProgramminguyFromScratch/GMZ" target="_blank"><i class="fab fa-github"></i> GitHub Repo</a>
                     <a href="/guidelines"><i class="fas fa-file-alt"></i> Submission Guidelines</a>
+                    <a href="/submit"><i class="fa-solid fa-trophy"></i> Submit a Record</a>
                 </div>
             </div>
         </div>
@@ -159,7 +161,13 @@
         </main>
 
         <aside id="sidebar">
-            <a href="https://docs.google.com/forms/d/e/1FAIpQLSfgjpCE6e8sHa-GcjVrD27Tcymbc0Q7w2MGdxVTtWnKi-uoXg/viewform" target="_blank" class="submit-btn">Submit a Completion</a>
+            <a href="/submit" class="submit-btn">Submit a Completion</a>
+            <h3>Sort By</h3>
+            <select id="sort-selector" onchange="filterLevels()" style="width:100%; background: var(--bg-page); color: white; border: 1px solid var(--border); padding: 10px; border-radius: 6px; font-family: 'Montserrat'; cursor: pointer; font-weight: 600; outline: none; margin-bottom: 20px;">
+                <option value="rank">RANK (DEFAULT)</option>
+                <option value="quality">QUALITY</option>
+                <option value="enjoyment">ENJOYMENT</option>
+            </select>
             <h3>Filter Skills</h3>
             <div id="tag-filters"></div>
         </aside>
@@ -177,21 +185,20 @@
         function parseSkills(raw) { return raw ? raw.split(/\r?\n|,/).map(s => s.trim()).filter(Boolean) : []; }
         function safeText(val) { return val == null ? "" : String(val); }
 
-        function mapRowToLevel(row) {
+        function mapRowToLevel(row, gid, rowIndex) {
             const keys = Object.keys(row);
             const columnAValue = keys.length > 0 ? safeText(row[keys[0]]) : "N/A";
-    
-            const acronym = safeText(row["Acronym"] || "").toLowerCase();
     
             return {
                 id: columnAValue,
                 name: safeText(row["Name"] || "Unknown"),
-                img: acronym ? `assets/thumbs/${acronym}.png` : "assets/thumbs/Noimageavailable.png",
+                img: `assets/smallthumbs/cellImage_${gid}_${rowIndex}.jpg`,
                 author: safeText(row["Creator(s)"] || "Unknown"),
                 rank: safeText(row["Rank"] || "0"),
                 difficulty: safeText(row["Difficulty"] || ""),
                 points: safeText(row["Points"] || "0"),
                 quality: safeText(row["Quality"] || ""),
+                enjoyment: safeText(row["Enjoyment"] || ""),
                 _skillsArray: parseSkills(safeText(row["Skills Needed"] || "")).map(s => s.toLowerCase())
             };
         }
@@ -199,7 +206,8 @@
         async function fetchSheetCsv(gid) {
             const res = await fetch(getCsvUrl(gid));
             const text = await res.text();
-            return Papa.parse(text, { header: true, skipEmptyLines: true }).data;
+            const rows = Papa.parse(text, { header: true, skipEmptyLines: true }).data;
+            return rows.map((row, i) => mapRowToLevel(row, gid, i));
         }
 
         // --- NAVIGATION ---
@@ -208,10 +216,25 @@
         }
 
         // --- RENDERING ---
+        const QUALITY_RANK = { "basic": 0, "good": 1, "inspired": 2, "stellar": 3, "mythic": 4 };
+        function qualityRank(q) {
+            const key = (q || "").toString().trim().toLowerCase();
+            return QUALITY_RANK.hasOwnProperty(key) ? QUALITY_RANK[key] : -1;
+        }
+
         function filterLevels() {
             const filtered = window.DATA.levels.filter(lvl => 
                 activeTags.length === 0 || activeTags.every(t => lvl._skillsArray.includes(t.toLowerCase()))
             );
+
+            const sortType = document.getElementById('sort-selector') ? document.getElementById('sort-selector').value : 'rank';
+            if (sortType === 'quality') {
+                filtered.sort((a, b) => qualityRank(b.quality) - qualityRank(a.quality));
+            } else if (sortType === 'enjoyment') {
+                filtered.sort((a, b) => (parseFloat(b.enjoyment) || 0) - (parseFloat(a.enjoyment) || 0));
+            } else {
+                filtered.sort((a, b) => (parseFloat(a.rank) || 0) - (parseFloat(b.rank) || 0));
+            }
             
             document.getElementById('list-view').innerHTML = filtered.map(lvl => `
                 <div class="level-entry" onclick="navigateToLevel('${lvl.id}')" style="--bg-image: url('${lvl.img}')">
@@ -248,7 +271,7 @@
         async function init() {
             try {
                 const [d1, d2] = await Promise.all([fetchSheetCsv(sheetGids[0]), fetchSheetCsv(sheetGids[1])]);
-                window.DATA.levels = [...d1, ...d2].map(mapRowToLevel);
+                window.DATA.levels = [...d1, ...d2];
                 
                 const tagSet = new Set();
                 window.DATA.levels.forEach(l => l._skillsArray.forEach(s => tagSet.add(s)));

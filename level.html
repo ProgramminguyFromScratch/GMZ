@@ -78,6 +78,7 @@
                 <div class="dropdown-content">
                     <a href="/mainlist"><i class="fas fa-list-ol"></i> Main List</a>
                     <a href="/expert"><i class="fas fa-expand-arrows-alt"></i> Extended List</a>
+                    <a href="/unverified"><i class="fas fa-question-circle"></i> Unverified Zone</a>
                 </div>
             </div>
 
@@ -141,7 +142,8 @@
         
         const GID_CONFIG = {
             'M': { gids: ["0", "1720349441"], backText: "← Back to Main List", backLink: "/mainlist" },
-            'E': { gids: ["1575264256"], backText: "← Back to Extended List", backLink: "/expert" }
+            'E': { gids: ["1575264256"], backText: "← Back to Extended List", backLink: "/expert" },
+            'U': { gids: ["1899417734"], backText: "← Back to Unverified Zone", backLink: "/unverified" }
         };
 
         function getScoreColor(val) {
@@ -168,48 +170,67 @@
             if (!targetId) { window.location.href = '/mainlist'; return; }
 
             const prefix = targetId.charAt(0).toUpperCase();
-            const config = GID_CONFIG[prefix] || GID_CONFIG['M'];
+            const initialConfig = GID_CONFIG[prefix] || GID_CONFIG['M'];
 
             const backBtn = document.getElementById('back-btn');
-            backBtn.innerText = config.backText;
-            backBtn.href = config.backLink;
 
             try {
-                const results = await Promise.all(config.gids.map(gid => 
-                    fetch(`https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&gid=${gid}`)
-                    .then(r => r.text())
-                    .then(txt => Papa.parse(txt, { header: true, skipEmptyLines: true }).data)
-                ));
+                // Try the prefix-guessed sheet(s) first, then fall back to checking every other known sheet.
+                const configsToTry = [initialConfig, ...Object.values(GID_CONFIG).filter(c => c !== initialConfig)];
 
-                const allRows = results.flat();
-                const lvl = allRows.find(row => String(Object.values(row)[0]).trim() === String(targetId).trim());
+                let lvl = null, matchedGid = null, matchedRowIndex = null, matchedConfig = null;
+
+                for (const config of configsToTry) {
+                    const results = await Promise.all(config.gids.map(gid => 
+                        fetch(`https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&gid=${gid}`)
+                        .then(r => r.text())
+                        .then(txt => Papa.parse(txt, { header: true, skipEmptyLines: true }).data)
+                    ));
+
+                    for (let g = 0; g < config.gids.length; g++) {
+                        const idx = results[g].findIndex(row => String(Object.values(row)[0]).trim() === String(targetId).trim());
+                        if (idx !== -1) {
+                            lvl = results[g][idx];
+                            matchedGid = config.gids[g];
+                            matchedRowIndex = idx;
+                            matchedConfig = config;
+                            break;
+                        }
+                    }
+                    if (lvl) break;
+                }
 
                 if (!lvl) {
+                    backBtn.innerText = initialConfig.backText;
+                    backBtn.href = initialConfig.backLink;
                     document.getElementById('loading-msg').innerHTML = "<h1>Level Not Found</h1>";
                     return;
                 }
-                renderPage(lvl, targetId, prefix);
+
+                backBtn.innerText = matchedConfig.backText;
+                backBtn.href = matchedConfig.backLink;
+                renderPage(lvl, targetId, prefix, matchedGid, matchedRowIndex, matchedConfig.backLink === '/unverified');
             } catch (err) {
                 document.getElementById('loading-msg').innerHTML = "Database Connection Failed.";
             }
         }
 
-        function renderPage(lvl, idValue, prefix) {
+        function renderPage(lvl, idValue, prefix, gid, rowIndex, isUnverified) {
             const getVal = (keys) => {
                 const foundKey = Object.keys(lvl).find(k => keys.includes(k.trim()));
                 return foundKey ? lvl[foundKey] : "";
             };
 
             const name = getVal(["Name", "name"]) || "Unknown";
-            const rank = getVal(["Rank"]);
-            const acronym = (getVal(["Acronym"]) || "").toLowerCase().trim();
-            const thumb = acronym ? `assets/thumbs/${acronym}.png` : "assets/thumbs/Noimageavailable.png";
+            const rank = isUnverified ? (rowIndex + 1) : getVal(["Rank"]);
+            const thumb = `assets/thumbs/cellImage_${gid}_${rowIndex}.jpg`;
             const levelCode = (getVal(["Level Code"]) || "").trim();
             const enjoymentVal = getVal(["Enjoyment"]) || "0";
             const qualityVal = (getVal(["Quality"]) || "Basic").trim();
-            const difficultyVal = (getVal(["Difficulty"]) || "N/A").trim();
+            const difficultyVal = (getVal(["Difficulty", "Estimated Difficulty"]) || "N/A").trim();
             const pointsVal = getVal(["Points"]) || "0";
-            
+
+            document.title = `${name} | ID: ${idValue}`;
             document.getElementById('banner').style.backgroundImage = `url('${thumb}')`;
             document.getElementById('loading-msg').style.display = 'none';
             document.getElementById('page-content').style.display = 'flex';
@@ -229,7 +250,31 @@
             const skillsRaw = getVal(["Skills Needed", "Skills"]);
             const skillsHtml = skillsRaw ? skillsRaw.split(',').map(s => `<span class="skill-tag">${s.trim()}</span>`).join('') : "N/A";
 
-            const rankHtml = (prefix === 'M' && rank) ? `<span class="rank-bubble">#${rank}</span>` : "";
+            const rankHtml = ((prefix === 'M' || isUnverified) && rank) ? `<span class="rank-bubble">#${rank}</span>` : "";
+
+            const enjoymentRowHtml = isUnverified ? "" : `
+                    <div class="stat-row">
+                        <div class="stat-left">
+                            <div class="stat-icon-wrapper"><i class="fa-solid ${getEnjoymentIcon(enjoymentVal)}" style="color:${getScoreColor(enjoymentVal)}"></i></div>
+                            <span class="stat-row-label">Enjoyment</span>
+                        </div>
+                        <div class="stat-row-value" style="color:${getScoreColor(enjoymentVal)}">${enjoymentVal}</div>
+                    </div>`;
+
+            const pointsRowHtml = isUnverified ? "" : `
+                    <div class="stat-row">
+                        <div class="stat-left">
+                            <div class="stat-icon-wrapper"><i class="fa-solid fa-bolt" style="color:var(--accent)"></i></div>
+                            <span class="stat-row-label">Points</span>
+                        </div>
+                        <div class="stat-row-value" style="color:var(--accent)">${pointsVal}</div>
+                    </div>`;
+
+            const skillsSectionHtml = isUnverified ? "" : `
+                <div style="margin-top:40px; border-top: 1px solid var(--border); padding-top:20px;">
+                    <span class="section-label">Skills Required</span>
+                    <div style="margin-top:10px;">${skillsHtml}</div>
+                </div>`;
 
             document.getElementById('main-details').innerHTML = `
                 <div class="level-header-row">
@@ -253,14 +298,7 @@
                             <span class="stat-row-label">Difficulty</span>
                         </div>
                         <div class="stat-row-value">${difficultyVal}</div>
-                    </div>
-                    <div class="stat-row">
-                        <div class="stat-left">
-                            <div class="stat-icon-wrapper"><i class="fa-solid ${getEnjoymentIcon(enjoymentVal)}" style="color:${getScoreColor(enjoymentVal)}"></i></div>
-                            <span class="stat-row-label">Enjoyment</span>
-                        </div>
-                        <div class="stat-row-value" style="color:${getScoreColor(enjoymentVal)}">${enjoymentVal}</div>
-                    </div>
+                    </div>${enjoymentRowHtml}
                     <div class="stat-row">
                         <div class="stat-left">
                             <div class="stat-icon-wrapper">
@@ -269,20 +307,9 @@
                             <span class="stat-row-label">Quality</span>
                         </div>
                         <div class="stat-row-value">${qualityVal}</div>
-                    </div>
-                    <div class="stat-row">
-                        <div class="stat-left">
-                            <div class="stat-icon-wrapper"><i class="fa-solid fa-bolt" style="color:var(--accent)"></i></div>
-                            <span class="stat-row-label">Points</span>
-                        </div>
-                        <div class="stat-row-value" style="color:var(--accent)">${pointsVal}</div>
-                    </div>
+                    </div>${pointsRowHtml}
                 </div>
-
-                <div style="margin-top:40px; border-top: 1px solid var(--border); padding-top:20px;">
-                    <span class="section-label">Skills Required</span>
-                    <div style="margin-top:10px;">${skillsHtml}</div>
-                </div>
+                ${skillsSectionHtml}
 
                 <div style="margin-top:40px; border-top: 1px solid var(--border); padding-top:20px;">
                     <span class="section-label">Level Details</span>
