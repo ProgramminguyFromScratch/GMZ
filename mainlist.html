@@ -198,7 +198,7 @@
             return {
                 id: columnAValue,
                 name: safeText(row["Name"] || "Unknown"),
-                img: `assets/smallthumbs/cellImage_${gid}_${rowIndex}.jpg`,
+                img: `assets/thumbs/${encodeURIComponent(columnAValue)}.jpg`,
                 author: safeText(row["Creator(s)"] || "Unknown"),
                 rank: safeText(row["Rank"] || "0"),
                 difficulty: safeText(row["Difficulty"] || ""),

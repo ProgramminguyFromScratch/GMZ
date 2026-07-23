@@ -207,7 +207,7 @@
                 author: safeText(row["Creator(s)"] || row["Author"]),
                 difficulty: safeText(row["Estimated Difficulty"]),
                 quality: safeText(row["Quality"]),
-                img: `assets/smallthumbs/cellImage_${unverifiedSheetGid}_${rowIndex}.jpg`
+                img: `assets/thumbs/${encodeURIComponent(levelId || acronym)}.jpg`
             };
         }
 

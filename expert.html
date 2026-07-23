@@ -182,7 +182,7 @@
                 quality: safeText(row["Quality"]),
                 enjoyment: safeText(row["Enjoyment"]),
                 _skillsArray: parseSkills(row["Skills Needed"]).map(s => s.toLowerCase()),
-                img: `assets/smallthumbs/cellImage_${expertSheetGid}_${rowIndex}.jpg`
+                img: `assets/thumbs/${encodeURIComponent(levelId || acronym)}.jpg`
             };
         }
 
