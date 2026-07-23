@@ -4,9 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Grandmaster Zone | Home</title>
+    <link rel="icon" type="image/png" href="assets/diffs/Grandmaster II.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="gmzCache.js"></script>
 </head>
 <body>
     <nav>
@@ -33,7 +35,7 @@
             <div class="dropdown dropdown-right">
                 <button class="dropbtn">Socials <i class="fas fa-caret-down"></i></button>
                 <div class="dropdown-content">
-                    <a href="https://dsc.gg/appelcord" target="_blank"><i class="fab fa-discord"></i> Discord</a>
+                    <a href="https://discord.gg/H8QkgPEuKw" target="_blank"><i class="fab fa-discord"></i> Discord</a>
                 </div>
             </div>
 
@@ -60,7 +62,7 @@
                 <i class="fas fa-users"></i>
                 <div class="stat-info">
                     <span class="stat-number" id="count-users">0</span>
-                    <span class="stat-label">Active Users</span>
+                    <span class="stat-label">Users</span>
                 </div>
             </div>
             <div class="stat-item">
@@ -127,9 +129,7 @@
 
         async function loadChangelog() {
             try {
-                const response = await fetch(SHEET_CSV_URL);
-                if (!response.ok) throw new Error('Network error');
-                const data = await response.text();
+                const data = await GMZCache.fetchTextCached(SHEET_CSV_URL);
                 
                 const rows = data.split(/\r?\n/).slice(1); 
                 const container = document.getElementById('changelog-target');
@@ -177,9 +177,7 @@
         const RANKED_GIDS = ["0", "1720349441", "1575264256"]; // GM, Master, Expert
 
         async function fetchCsv(gid) {
-            const res = await fetch(`https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${gid}`);
-            const text = await res.text();
-            return Papa.parse(text, { header: true, skipEmptyLines: true }).data;
+            return GMZCache.fetchCsvCached(GMZCache.sheetCsvUrl(SPREADSHEET_ID, gid));
         }
 
         async function loadStats() {

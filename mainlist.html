@@ -4,9 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Grandmaster Zone | Main List</title>
+    <link rel="icon" type="image/png" href="assets/diffs/Grandmaster II.png">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="gmzCache.js"></script>
     <style>
         .page-container { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
         
@@ -139,7 +141,7 @@
             <div class="dropdown dropdown-right">
                 <button class="dropbtn">Socials <i class="fas fa-caret-down"></i></button>
                 <div class="dropdown-content">
-                    <a href="https://dsc.gg/appelcord" target="_blank"><i class="fab fa-discord"></i> Discord</a>
+                    <a href="https://discord.gg/H8QkgPEuKw" target="_blank"><i class="fab fa-discord"></i> Discord</a>
                 </div>
             </div>
 
@@ -169,6 +171,10 @@
                 <option value="enjoyment">ENJOYMENT</option>
             </select>
             <h3>Filter Skills</h3>
+            <label style="display:flex; align-items:center; gap:8px; margin-bottom:12px; font-size:0.85rem; color:var(--text-muted); cursor:pointer;">
+                <input type="checkbox" id="exclude-toggle" onchange="filterLevels()">
+                Exclude selected skills instead
+            </label>
             <div id="tag-filters"></div>
         </aside>
     </div>
@@ -204,9 +210,7 @@
         }
 
         async function fetchSheetCsv(gid) {
-            const res = await fetch(getCsvUrl(gid));
-            const text = await res.text();
-            const rows = Papa.parse(text, { header: true, skipEmptyLines: true }).data;
+            const rows = await GMZCache.fetchCsvCached(getCsvUrl(gid));
             return rows.map((row, i) => mapRowToLevel(row, gid, i));
         }
 
@@ -223,9 +227,14 @@
         }
 
         function filterLevels() {
-            const filtered = window.DATA.levels.filter(lvl => 
-                activeTags.length === 0 || activeTags.every(t => lvl._skillsArray.includes(t.toLowerCase()))
-            );
+            const excludeMode = document.getElementById('exclude-toggle') ? document.getElementById('exclude-toggle').checked : false;
+
+            const filtered = window.DATA.levels.filter(lvl => {
+                if (activeTags.length === 0) return true;
+                return excludeMode
+                    ? activeTags.every(t => !lvl._skillsArray.includes(t.toLowerCase()))
+                    : activeTags.every(t => lvl._skillsArray.includes(t.toLowerCase()));
+            });
 
             const sortType = document.getElementById('sort-selector') ? document.getElementById('sort-selector').value : 'rank';
             if (sortType === 'quality') {

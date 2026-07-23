@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="gmzCache.js"></script>
     <style>
         body { margin: 0; padding: 0; overflow: hidden; background: var(--bg-page); font-family: 'Montserrat', sans-serif; }
 
@@ -181,7 +182,7 @@
             <div class="dropdown dropdown-right">
                 <button class="dropbtn">Socials <i class="fas fa-caret-down"></i></button>
                 <div class="dropdown-content">
-                    <a href="https://dsc.gg/appelcord" target="_blank"><i class="fab fa-discord"></i> Discord</a>
+                    <a href="https://discord.gg/H8QkgPEuKw" target="_blank"><i class="fab fa-discord"></i> Discord</a>
                 </div>
             </div>
             <div class="dropdown dropdown-right">
@@ -257,9 +258,7 @@
     }
 
     async function fetchCsv(gid) {
-        const res = await fetch(csvUrl(gid));
-        const text = await res.text();
-        return Papa.parse(text, { header: true, skipEmptyLines: true }).data;
+        return GMZCache.fetchCsvCached(csvUrl(gid));
     }
 
     function getClears(name) { return window.ALL_LEVELS.filter(l => l.victors.some(v => v.toLowerCase() === name.toLowerCase())); }

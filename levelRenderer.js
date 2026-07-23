@@ -74,7 +74,40 @@ class LevelRenderer {
         }
     }
 
-    async loadAssets(onProgress) {        
+    async loadAssets(onProgress) {
+        // Global, in-memory cache of the raw (un-hued) tile/wall/background
+        // images. This lives on `window` for the lifetime of the page, so
+        // reopening the level preview multiple times during one visit reuses
+        // the already-decoded images instead of re-requesting ~196 files.
+        // A page refresh naturally clears it since `window` is recreated.
+        window.GMZ_ASSET_CACHE = window.GMZ_ASSET_CACHE || null;
+
+        if (window.GMZ_ASSET_CACHE) {
+            // Assets already loaded earlier in this session - reuse instantly.
+            const cache = window.GMZ_ASSET_CACHE;
+            this.tiles = cache.tiles;
+            this.wallTiles = cache.wallTiles;
+            this.background = cache.background;
+            this.assetsLoaded = true;
+            if (onProgress) {
+                const total = cache.tiles.length + cache.wallTiles.length + 1;
+                for (let i = 0; i < total; i++) onProgress();
+            }
+            return;
+        }
+
+        if (window.GMZ_ASSET_CACHE_LOADING) {
+            // Another popup instance is already loading assets - wait for it
+            // instead of kicking off a duplicate set of network requests.
+            await window.GMZ_ASSET_CACHE_LOADING;
+            const cache = window.GMZ_ASSET_CACHE;
+            this.tiles = cache.tiles;
+            this.wallTiles = cache.wallTiles;
+            this.background = cache.background;
+            this.assetsLoaded = true;
+            return;
+        }
+
         const loadImage = (src) => {
             return new Promise(resolve => {
                 const img = new Image();
@@ -91,38 +124,47 @@ class LevelRenderer {
             });
         };
 
-        const tilePromises = [];
-        for (let i = 1; i <= 172; i++) {
-            tilePromises.push(loadImage(`assets/tiles/${i}.svg`));
-        }
-        this.tiles = await Promise.all(tilePromises);
+        window.GMZ_ASSET_CACHE_LOADING = (async () => {
+            const tilePromises = [];
+            for (let i = 1; i <= 172; i++) {
+                tilePromises.push(loadImage(`assets/tiles/${i}.svg`));
+            }
+            const tiles = await Promise.all(tilePromises);
 
-        const wallPromises = [];
-        for (let i = 1; i <= 24; i++) {
-            wallPromises.push(loadImage(`assets/wall/${i}.svg`));
-        }
-        this.wallTiles = await Promise.all(wallPromises);
+            const wallPromises = [];
+            for (let i = 1; i <= 24; i++) {
+                wallPromises.push(loadImage(`assets/wall/${i}.svg`));
+            }
+            const wallTiles = await Promise.all(wallPromises);
 
-        await new Promise(resolve => {
-            const img = new Image();
-            img.onload = () => { 
-                this.background = img; 
-                if (onProgress) onProgress();
-                resolve(); 
-            };
-            img.onerror = () => {
-                const fallback = document.createElement('canvas');
-                fallback.width = 480; fallback.height = 360;
-                const fctx = fallback.getContext('2d');
-                fctx.fillStyle = '#4A90E2'; 
-                fctx.fillRect(0, 0, 480, 360);
-                this.background = fallback;
-                if (onProgress) onProgress();
-                resolve();
-            };
-            img.src = 'assets/bg.svg';
-        });
+            const background = await new Promise(resolve => {
+                const img = new Image();
+                img.onload = () => {
+                    if (onProgress) onProgress();
+                    resolve(img);
+                };
+                img.onerror = () => {
+                    const fallback = document.createElement('canvas');
+                    fallback.width = 480; fallback.height = 360;
+                    const fctx = fallback.getContext('2d');
+                    fctx.fillStyle = '#4A90E2';
+                    fctx.fillRect(0, 0, 480, 360);
+                    if (onProgress) onProgress();
+                    resolve(fallback);
+                };
+                img.src = 'assets/bg.svg';
+            });
 
+            window.GMZ_ASSET_CACHE = { tiles, wallTiles, background };
+            return window.GMZ_ASSET_CACHE;
+        })();
+
+        const cache = await window.GMZ_ASSET_CACHE_LOADING;
+        window.GMZ_ASSET_CACHE_LOADING = null;
+
+        this.tiles = cache.tiles;
+        this.wallTiles = cache.wallTiles;
+        this.background = cache.background;
         this.assetsLoaded = true;
     }
 

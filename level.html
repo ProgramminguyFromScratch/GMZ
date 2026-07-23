@@ -4,9 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Loading...</title>
+    <link rel="icon" type="image/png" href="assets/diffs/Grandmaster II.png">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="gmzCache.js"></script>
     <style>
         .page-container { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
         .top-nav { margin-bottom: 20px; }
@@ -93,7 +95,7 @@
             <div class="dropdown dropdown-right">
                 <button class="dropbtn">Socials <i class="fas fa-caret-down"></i></button>
                 <div class="dropdown-content">
-                    <a href="https://dsc.gg/appelcord" target="_blank"><i class="fab fa-discord"></i> Discord</a>
+                    <a href="https://discord.gg/H8QkgPEuKw" target="_blank"><i class="fab fa-discord"></i> Discord</a>
                 </div>
             </div>
 
@@ -182,9 +184,7 @@
 
                 for (const config of configsToTry) {
                     const results = await Promise.all(config.gids.map(gid => 
-                        fetch(`https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&gid=${gid}`)
-                        .then(r => r.text())
-                        .then(txt => Papa.parse(txt, { header: true, skipEmptyLines: true }).data)
+                        GMZCache.fetchCsvCached(GMZCache.sheetCsvUrl(spreadsheetId, gid))
                     ));
 
                     for (let g = 0; g < config.gids.length; g++) {

@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="gmzCache.js"></script>
     <style>
         /* Bucket header styling */
         .bucket-header {
@@ -109,7 +110,7 @@
             <div class="dropdown dropdown-right">
                 <button class="dropbtn">Socials <i class="fas fa-caret-down"></i></button>
                 <div class="dropdown-content">
-                    <a href="https://dsc.gg/appelcord" target="_blank"><i class="fab fa-discord"></i> Discord</a>
+                    <a href="https://discord.gg/H8QkgPEuKw" target="_blank"><i class="fab fa-discord"></i> Discord</a>
                 </div>
             </div>
 
@@ -138,6 +139,10 @@
                 <option value="enjoyment">ENJOYMENT</option>
             </select>
             <h3>Filter Skills</h3>
+            <label style="display:flex; align-items:center; gap:8px; margin-bottom:12px; font-size:0.85rem; color:var(--text-muted); cursor:pointer;">
+                <input type="checkbox" id="exclude-toggle" onchange="renderLevels()">
+                Exclude selected skills instead
+            </label>
             <div id="tag-filters"></div>
         </aside>
     </div>
@@ -182,8 +187,12 @@
         }
 
         function renderLevels() {
+            const excludeMode = document.getElementById('exclude-toggle') ? document.getElementById('exclude-toggle').checked : false;
+
             const filtered = DATA.levels.filter(lvl => 
-                activeTags.every(t => lvl._skillsArray.includes(t.toLowerCase()))
+                excludeMode
+                    ? activeTags.every(t => !lvl._skillsArray.includes(t.toLowerCase()))
+                    : activeTags.every(t => lvl._skillsArray.includes(t.toLowerCase()))
             );
 
             const sortType = document.getElementById('sort-selector') ? document.getElementById('sort-selector').value : 'default';
@@ -224,9 +233,7 @@
         }
 
         async function init() {
-            const res = await fetch(`https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&gid=${expertSheetGid}`);
-            const text = await res.text();
-            const { data } = Papa.parse(text, { header: true, skipEmptyLines: true });
+            const data = await GMZCache.fetchCsvCached(GMZCache.sheetCsvUrl(spreadsheetId, expertSheetGid));
             DATA.levels = data.map((row, i) => mapRowToLevel(row, i));
 
             const tagSet = new Set();
