@@ -223,7 +223,11 @@
 
             const name = getVal(["Name", "name"]) || "Unknown";
             const rank = isUnverified ? (rowIndex + 1) : getVal(["Rank"]);
-            const thumb = `assets/thumbs/cellImage_${gid}_${rowIndex}.jpg`;
+            const thumbCandidates = [
+                `assets/thumbs/${encodeURIComponent(String(idValue).trim())}.jpg`,
+                `assets/thumbs/cellImage_${gid}_${rowIndex}.jpg`,
+                `assets/thumbs/Noimageavailable.png`
+            ];
             const levelCode = (getVal(["Level Code"]) || "").trim();
             const enjoymentVal = getVal(["Enjoyment"]) || "0";
             const qualityVal = (getVal(["Quality"]) || "Basic").trim();
@@ -231,7 +235,13 @@
             const pointsVal = getVal(["Points"]) || "0";
 
             document.title = `${name} | ID: ${idValue}`;
-            document.getElementById('banner').style.backgroundImage = `url('${thumb}')`;
+            (function loadBanner(i) {
+                if (i >= thumbCandidates.length) return;
+                const probe = new Image();
+                probe.onload = () => { document.getElementById('banner').style.backgroundImage = `url('${thumbCandidates[i]}')`; };
+                probe.onerror = () => loadBanner(i + 1);
+                probe.src = thumbCandidates[i];
+            })(0);
             document.getElementById('loading-msg').style.display = 'none';
             document.getElementById('page-content').style.display = 'flex';
 
