@@ -177,6 +177,7 @@
                 id: levelId || acronym,
                 name: safeText(row["Name"] || row["name"]),
                 author: safeText(row["Creator(s)"] || row["Author"]),
+                acronym: safeText(row["Acronym"]),
                 difficulty: safeText(row["Difficulty"]),
                 points: safeText(row["Points"]),
                 quality: safeText(row["Quality"]),
@@ -217,7 +218,7 @@
                         <div class="level-entry" onclick="window.location.href='/level?id=${encodeURIComponent(lvl.id)}'" style="--bg-image: url('${lvl.img}')">
                             <img class="level-thumb" src="${lvl.img}" onerror="this.src='assets/thumbs/Noimageavailable.png'">
                             <div class="level-info" style="padding: 0 12px; min-width: 0;">
-                                <div class="level-name">${lvl.name}</div>
+                                <div class="level-name">${lvl.name}${lvl.acronym ? ` <span style="font-size:0.7em; font-weight:700; color:var(--text-muted); letter-spacing:1px;">(${lvl.acronym})</span>` : ""}</div>
                                 <div class="level-meta">by ${lvl.author}</div>
                                 <div class="level-meta" style="color:var(--accent); font-weight:700;">${lvl.points} pts</div>
                             </div>

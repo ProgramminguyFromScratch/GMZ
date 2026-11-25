@@ -67,6 +67,24 @@
         .action-btn { background: var(--accent); color: white; border: none; padding: 0 20px; border-radius: 6px; font-weight: 700; cursor: pointer; transition: 0.2s; white-space: nowrap; height: 42px; }
         .action-btn:hover { opacity: 0.8; }
 
+
+        .info-block { margin: 20px 0 0; padding: 18px 20px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 10px; }
+        .info-block p { margin: 0; color: #eee; white-space: pre-wrap; word-break: break-word; line-height: 1.5; }
+        .info-block.guidelines { border-left: 4px solid #f59e0b; }
+        .info-block.guidelines .section-label { color: #f59e0b; }
+        .info-block.notes { border-left: 4px solid #38bdf8; }
+        .info-block.notes .section-label { color: #38bdf8; }
+        .acronym-tag { display: inline-block; align-self: flex-start; margin-top: 6px; padding: 3px 10px; font-size: 0.8rem; font-weight: 800; letter-spacing: 1px; border-radius: 6px; background: rgba(255,255,255,0.08); border: 1px solid var(--border); color: var(--text-muted); }
+        .meta-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+        .meta-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; font-size: 0.78rem; font-weight: 700; border-radius: 999px; background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: var(--text-muted); text-decoration: none; }
+        a.meta-chip:hover { color: #fff; border-color: var(--accent); }
+        .resource-list { display: flex; flex-direction: column; gap: 8px; }
+        .resource-link { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); color: #fff; text-decoration: none; font-weight: 600; font-size: 0.9rem; word-break: break-word; transition: 0.2s; }
+        .resource-link:hover { border-color: var(--accent); background: rgba(255,255,255,0.08); }
+        .resource-link i { color: var(--accent); width: 18px; text-align: center; }
+        .resource-text { color: var(--text-muted); font-size: 0.9rem; white-space: pre-wrap; }
+        .tas-box { display: flex; gap: 8px; margin-top: 10px; max-width: 600px; }
+
         @media (max-width: 900px) { .layout-wrapper { flex-direction: column; } }
     </style>
 </head>
@@ -127,11 +145,13 @@
             </div>
             
             <div class="sidebar-card">
-                <span class="section-label">Verifier</span>
+                <span class="section-label" id="sidebar-label-1">Verifier</span>
                 <div id="verifier-area"></div>
-                <div class="sidebar-divider"></div>
-                <span class="section-label">Victors</span>
-                <div id="victors-area"></div>
+                <div id="sidebar-rest">
+                    <div class="sidebar-divider"></div>
+                    <span class="section-label">Victors</span>
+                    <div id="victors-area"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -164,6 +184,43 @@
             if (n >= 30) return 'fa-face-frown';
             if (n >= 15) return 'fa-face-angry';
             return 'fa-face-dizzy';                    
+        }
+
+
+        function esc(str) {
+            return String(str == null ? "" : str).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+        }
+        // true when a sheet cell has real content (blank / N/A / None don't count)
+        function hasText(v) {
+            const t = String(v == null ? "" : v).trim().toLowerCase();
+            return t !== "" && t !== "n/a" && t !== "na" && t !== "none" && t !== "-";
+        }
+        function linkIcon(url) {
+            if (/youtu\.?be/i.test(url)) return 'fa-brands fa-youtube';
+            if (/discord/i.test(url)) return 'fa-brands fa-discord';
+            if (/scratch\.mit\.edu/i.test(url)) return 'fa-solid fa-cat';
+            if (/github/i.test(url)) return 'fa-brands fa-github';
+            return 'fa-solid fa-link';
+        }
+        // Turns a multi-line cell into link buttons (for lines with URLs) + plain text lines.
+        function resourcesHtml(raw) {
+            const urlRe = /https?:\/\/[^\s"'<>]+/g;
+            const out = [];
+            String(raw).split(/\r?\n/).forEach(line => {
+                line = line.trim();
+                if (!line) return;
+                const urls = line.match(urlRe);
+                if (!urls) { out.push(`<div class="resource-text">${esc(line)}</div>`); return; }
+                const label = line.replace(urlRe, '').replace(/[\s:\-–]+$/, '').trim();
+                urls.forEach((u, i) => {
+                    const text = label || (u.replace(/^https?:\/\/(www\.)?/, '').slice(0, 60));
+                    out.push(`<a class="resource-link" href="${esc(u)}" target="_blank" rel="noopener noreferrer"><i class="${linkIcon(u)}"></i><span>${esc(urls.length > 1 ? text + ' ' + (i + 1) : text)}</span></a>`);
+                });
+            });
+            return `<div class="resource-list">${out.join('')}</div>`;
+        }
+        function textBlock(cls, label, icon, value) {
+            return `<div class="info-block ${cls}"><span class="section-label"><i class="fa-solid ${icon}"></i> ${label}</span><p>${esc(value)}</p></div>`;
         }
 
         async function init() {
@@ -233,6 +290,15 @@
             const qualityVal = (getVal(["Quality"]) || "Basic").trim();
             const difficultyVal = (getVal(["Difficulty", "Estimated Difficulty"]) || "N/A").trim();
             const pointsVal = getVal(["Points"]) || "0";
+            const acronym = (getVal(["Acronym"]) || "").trim();
+            const numVal = (getVal(["Num"]) || "").trim();
+            const projectForum = (getVal(["Project/Forum"]) || "").trim();
+            const guidelines = getVal(["Guidelines for Completion"]) || "";
+            const notes = getVal(["Notes"]) || "";
+            const resources = getVal(["Helpful Resources"]) || "";
+            const tasCreators = (getVal(["TAS Creators"]) || "").trim();
+            const tasCode = (getVal(["TAS"]) || "").trim();
+            const description = getVal(["Description"]) || "";
 
             document.title = `${name} | ID: ${idValue}`;
             (function loadBanner(i) {
@@ -248,14 +314,24 @@
             const verifier = (getVal(["Verifier"]) || "").trim();
             const victorsRaw = getVal(["Victors"]) || "";
             const otherVictors = victorsRaw.split(/[ ,]+/).filter(v => v && v.toLowerCase() !== "none" && v.toLowerCase() !== verifier.toLowerCase());
+            const playerHtml = (n, strong) => `<div class="player-entry"><img src="assets/players/${esc(n)}.png" onerror="this.src='assets/players/default.png'" class="player-pfp">${strong ? `<strong>${esc(n)}</strong>` : `<span>${esc(n)}</span>`}</div>`;
 
-            document.getElementById('verifier-area').innerHTML = (verifier && verifier.toLowerCase() !== "none") 
-                ? `<div class="player-entry"><img src="assets/players/${verifier}.png" onerror="this.src='assets/players/default.png'" class="player-pfp"><strong>${verifier}</strong></div>`
-                : `<p style="color:var(--text-muted);">None</p>`;
-
-            document.getElementById('victors-area').innerHTML = otherVictors.length > 0 
-                ? otherVictors.map(v => `<div class="player-entry"><img src="assets/players/${v.trim()}.png" onerror="this.src='assets/players/default.png'" class="player-pfp"><span>${v.trim()}</span></div>`).join("")
-                : `<p style="color:var(--text-muted);">None</p>`;
+            if (isUnverified) {
+                // Unverified levels have no verifier/victors; show the TAS creators instead.
+                document.getElementById('sidebar-label-1').textContent = 'TAS Creators';
+                document.getElementById('sidebar-rest').style.display = 'none';
+                const tasPeople = tasCreators.split(/[ ,]+/).filter(v => hasText(v));
+                document.getElementById('verifier-area').innerHTML = tasPeople.length
+                    ? tasPeople.map(v => playerHtml(v, true)).join("")
+                    : `<p style="color:var(--text-muted);">None</p>`;
+            } else {
+                document.getElementById('verifier-area').innerHTML = (verifier && verifier.toLowerCase() !== "none")
+                    ? playerHtml(verifier, true)
+                    : `<p style="color:var(--text-muted);">None</p>`;
+                document.getElementById('victors-area').innerHTML = otherVictors.length > 0
+                    ? otherVictors.map(v => playerHtml(v.trim(), false)).join("")
+                    : `<p style="color:var(--text-muted);">None</p>`;
+            }
 
             const skillsRaw = getVal(["Skills Needed", "Skills"]);
             const skillsHtml = skillsRaw ? skillsRaw.split(',').map(s => `<span class="skill-tag">${s.trim()}</span>`).join('') : "N/A";
@@ -286,20 +362,50 @@
                     <div style="margin-top:10px;">${skillsHtml}</div>
                 </div>`;
 
+            const chips = [];
+            if (numVal && hasText(numVal)) chips.push(`<span class="meta-chip"><i class="fa-solid fa-hashtag"></i> Entry ${esc(numVal)}</span>`);
+            if (hasText(projectForum)) {
+                chips.push(/^https?:\/\//i.test(projectForum)
+                    ? `<a class="meta-chip" href="${esc(projectForum)}" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-folder-open"></i> Project / Forum</a>`
+                    : `<span class="meta-chip"><i class="fa-solid fa-folder-open"></i> ${esc(projectForum)}</span>`);
+            }
+            if (isUnverified && hasText(tasCreators)) chips.push(`<span class="meta-chip"><i class="fa-solid fa-robot"></i> TAS by ${esc(tasCreators)}</span>`);
+            const chipsHtml = chips.length ? `<div class="meta-chips">${chips.join('')}</div>` : "";
+
+            const resourcesSectionHtml = hasText(resources) ? `
+                <div style="margin-top:40px; border-top: 1px solid var(--border); padding-top:20px;">
+                    <span class="section-label">Helpful Resources</span>
+                    ${resourcesHtml(resources)}
+                </div>` : "";
+
+            const tasSectionHtml = (isUnverified && hasText(tasCode)) ? `
+                <div style="margin-top:40px; border-top: 1px solid var(--border); padding-top:20px;">
+                    <span class="section-label">TAS</span>
+                    <div class="tas-box">
+                        <input type="text" value="${esc(tasCode)}" readonly class="code-input">
+                        <button onclick="copyLevelCode(this, document.getElementById('tas-code-store').value)" class="action-btn">Copy</button>
+                        <input type="hidden" id="tas-code-store" value="${esc(tasCode)}">
+                    </div>
+                </div>` : "";
+
             document.getElementById('main-details').innerHTML = `
                 <div class="level-header-row">
                     ${rankHtml}
                     <div style="display: flex; flex-direction: column;">
                         <h1 style="font-size:3rem; font-weight:900; margin:0; line-height: 1.1;">${name}</h1>
-                        <span style="color: rgba(255,255,255,0.5); font-size: 1.6rem; font-family: monospace; font-weight: 700; margin-top: 5px;">ID: ${idValue}</span>
+                        <span style="color: rgba(255,255,255,0.5); font-size: 1.6rem; font-family: monospace; font-weight: 700; margin-top: 5px;">ID: ${esc(idValue)}</span>
+                        ${hasText(acronym) ? `<span class="acronym-tag">${esc(acronym)}</span>` : ""}
                     </div>
                 </div>
-                <p style="color:var(--text-muted); font-size:1.2rem; margin-top:15px;">by <strong>${getVal(["Creator(s)", "Author"])}</strong></p>
-                
-                <div style="margin:30px 0; padding:20px; background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:10px;">
+                <p style="color:var(--text-muted); font-size:1.2rem; margin-top:15px;">by <strong>${esc(getVal(["Creator(s)", "Author"]))}</strong></p>
+                ${chipsHtml}
+
+                <div style="margin:30px 0 0; padding:20px; background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:10px;">
                     <span class="section-label" style="color:var(--accent)">Description</span>
-                    <p style="margin:0; color:#eee;">${getVal(["Description", "Notes"]) || "No description provided."}</p>
+                    <p style="margin:0; color:#eee; white-space:pre-wrap; word-break:break-word;">${hasText(description) ? esc(description) : "No description provided."}</p>
                 </div>
+                ${hasText(guidelines) ? textBlock('guidelines', 'Guidelines for Completion', 'fa-clipboard-check', guidelines) : ""}
+                ${hasText(notes) ? textBlock('notes', 'Notes', 'fa-note-sticky', notes) : ""}
 
                 <div class="stat-list">
                     <div class="stat-row">
@@ -324,11 +430,13 @@
                 <div style="margin-top:40px; border-top: 1px solid var(--border); padding-top:20px;">
                     <span class="section-label">Level Details</span>
                     <div class="code-container">
-                        <input type="text" value="${levelCode}" readonly class="code-input">
+                        <input type="text" value="${esc(levelCode)}" readonly class="code-input">
                         <button onclick="copyLevelCode(this, \`${levelCode.replace(/'/g, "\\'")}\`)" class="action-btn">Copy</button>
                         <button onclick="LevelPopup.show(\`${levelCode.replace(/'/g, "\\'")}\`)" class="action-btn">Preview</button>
                     </div>
                 </div>
+                ${tasSectionHtml}
+                ${resourcesSectionHtml}
             `;
         }
 

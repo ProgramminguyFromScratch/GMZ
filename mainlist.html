@@ -200,6 +200,7 @@
                 name: safeText(row["Name"] || "Unknown"),
                 img: `assets/thumbs/${encodeURIComponent(columnAValue)}.jpg`,
                 author: safeText(row["Creator(s)"] || "Unknown"),
+                acronym: safeText(row["Acronym"]),
                 rank: safeText(row["Rank"] || "0"),
                 difficulty: safeText(row["Difficulty"] || ""),
                 points: safeText(row["Points"] || "0"),
@@ -250,7 +251,7 @@
                     <img class="level-thumb" src="${lvl.img}" onerror="this.src='assets/thumbs/Noimageavailable.png'">
                     <div class="level-rank">#${lvl.rank}</div>
                     <div class="level-info">
-                        <div class="level-name">${lvl.name}</div>
+                        <div class="level-name">${lvl.name}${lvl.acronym ? ` <span style="font-size:0.7em; font-weight:700; color:var(--text-muted); letter-spacing:1px;">(${lvl.acronym})</span>` : ""}</div>
                         <div class="level-meta">by ${lvl.author}</div>
                         <div class="level-meta" style="color:var(--accent); font-weight:700;">${lvl.points} pts</div>
                     </div>
